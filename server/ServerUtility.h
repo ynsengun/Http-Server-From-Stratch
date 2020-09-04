@@ -6,13 +6,14 @@
 #include <cstring>
 #include <cstdlib>
 #include <fstream>
+#include <map>
 
 using namespace std;
 
 namespace ServerUtil{
+    void parseRequest( char *, string &, string &, int &, map<string, string>);
     void createIndexHTML( char *&);
     void createPostResponse( char *&, int);
-    void getMethodAndParam( char *, string &, string &);
 }
 
 #endif // __SERVER_UTILITY

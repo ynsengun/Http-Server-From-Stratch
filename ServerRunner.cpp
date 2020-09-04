@@ -1,11 +1,13 @@
 #include <iostream>
-#include "Server.h"
+#include "server/Server.h"
 
 using namespace std;
 
 const int PORT = 8088;
 
 int main(int argc, char const **argv) {
+    
+    // TODO load balancing, so parse main inputs
     
     Server server;
 
@@ -14,3 +16,5 @@ int main(int argc, char const **argv) {
 
     return 0;
 }
+
+// g++ -o exec *.cpp */*.cpp -pthread
