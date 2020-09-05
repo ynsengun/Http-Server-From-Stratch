@@ -12,6 +12,10 @@
 #include <queue>
 #include <map>
 
+#include "Session.h"
+
+typedef pair<bool, Session *> bs;
+
 using namespace std;
 
 class Server{
@@ -33,22 +37,23 @@ private:
         queue<int> clientSocketIDs;
         thread t;
     };
-    struct SessionCleanerThread{
-        queue<int> sessionIDs;
-        map<int, bool> isSessionActive;
+    struct SessionManagementThread{
+        queue<int> activeSessionIDs;
+         // first param indicates if the session is active, second param is the pointer for the session
+        map<int, bs> sessions;
         thread t;
     };
 
     WorkerThread workerThreads[WORKER_THREAD_COUNT];
     ClientSessionThread clientSesssionThreads[CLIENT_SESSION_THREAD_COUNT];
     ClientInitializerThread clientInitializerThread[CLIENT_INITIALIZER_THREAD_COUNT];
-    SessionCleanerThread sessionCleanerThread;
+    SessionManagementThread sessionManagementThread;
 
     struct sockaddr_in address;
-    char *indexHTML;
     int server_fd;
 
     void initializeThreads();
+    int chooseSessionThread();
     void parseRequest(int);
     void processSessionRequest(int);
     void processInitializerRequest(int);

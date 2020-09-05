@@ -12,7 +12,6 @@ using namespace std;
 
 namespace ServerUtil{
     void parseRequest( char *, string &, string &, int &, map<string, string>);
-    void createIndexHTML( char *&);
     void createPostResponse( char *&, int);
 }
 

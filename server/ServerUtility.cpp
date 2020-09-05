@@ -39,31 +39,14 @@ void ServerUtil::parseRequest( char *buffer, string &method, string &path, int &
                     break;
                 value += buffer[i];
             }
-            if(key == "sessionID"){
+            if(key == "sessionID")
                 sessionID = atoi(value.c_str());
-            } else{
-                params[key] = value;
-            }
+            params[key] = value;
         }
     } else{
         sessionID = -1;
         params.clear();
     }
-}
-
-void ServerUtil::createIndexHTML( char *&index){
-    ifstream ifs("../public/index.html");
-    string content( (std::istreambuf_iterator<char>(ifs) ), (std::istreambuf_iterator<char>()) );
-    const int indexLen = content.size();
-
-    string responseStr = "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: ";
-    responseStr += to_string(indexLen);
-    responseStr += "\n\n";
-    responseStr += content;
-    const int responseLen = responseStr.size();
-
-    index = new char[responseLen];
-    strcpy(index, responseStr.c_str());
 }
 
 void ServerUtil::createPostResponse( char *&postIndex, int socket_id){
