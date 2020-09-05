@@ -95,25 +95,6 @@ void Server::parseRequest(int tid){
                     session.second->pushNewRequest((Request){method, path, requestSocketID, params});
                 }
             }
-
-            /*
-            // TODO move below
-            if( method == "GET" ){
-                // create a thread maybe
-                printf("get resp\n%s\n",indexHTML);
-                write(requestSocketID , indexHTML , strlen(indexHTML));
-                printf("------------------Hello message sent-------------------\n");
-                close(requestSocketID);
-            } else if( method == "POST"){ // insert
-                char *postIndex;
-                ServerUtil::createPostResponse(postIndex, requestSocketID);
-                printf(" ---- resp ---- \n%s\n",postIndex);
-                // write(requestSocketID , postIndex , strlen(postIndex));
-                write(requestSocketID , indexHTML , strlen(indexHTML));
-                printf("------------------Post message sent-------------------\n");
-                // insert param
-            }
-            */
         }
     }
 }
@@ -135,19 +116,19 @@ void Server::processSessionRequest(int tid){
                     string response;
 
                     if(req.method == "GET"){
-                        response = Routes::httpGet(req.path, req.params);
+                        response = Routes::httpGet(req.path, req.params, session.second);
                     } else if(req.method == "POST"){
-                        response = Routes::httpPost(req.path, req.params);
+                        response = Routes::httpPost(req.path, req.params, session.second);
                     } else if(req.method == "PUT"){
-                        response = Routes::httpPut(req.path, req.params);
+                        response = Routes::httpPut(req.path, req.params, session.second);
                     } else if(req.method == "DELETE"){
-                        response = Routes::httpDelete(req.path, req.params);
+                        response = Routes::httpDelete(req.path, req.params, session.second);
                     }
 
                     cout<<"here is the response                 "<<response<<endl;
-                    // const int responseLen = response.size();
-                    // write(req.responseSocketID , response.c_str() , responseLen);
-                    // close(req.responseSocketID);
+                    const int responseLen = response.size();
+                    write(req.responseSocketID , response.c_str() , responseLen);
+                    close(req.responseSocketID);
                 }
 
                 clientSesssionThreads[tid].clients.push(sessionID);
@@ -175,10 +156,10 @@ void Server::processInitializerRequest(int tid){
             int newSessionID = Session::getNextSessionID();
             Session *newSession = new Session(newSessionID);
             sessionManagementThread.sessions[newSessionID] = bs(true, newSession);
+            sessionManagementThread.activeSessionIDs.push(newSessionID);
 
             map<string, string> params;
-            params["sessionID"] = to_string(newSessionID);
-            string response = Routes::httpGet("/", params);
+            string response = Routes::httpGet("/", params, newSession);
             const int responseLen = response.size();
             write(socketID , response.c_str() , responseLen);
 

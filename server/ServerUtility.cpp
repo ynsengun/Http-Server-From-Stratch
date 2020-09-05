@@ -1,6 +1,6 @@
 #include "ServerUtility.h"
 
-void ServerUtil::parseRequest( char *buffer, string &method, string &path, int &sessionID, map<string, string> params){
+void ServerUtil::parseRequest( char *buffer, string &method, string &path, int &sessionID, map<string, string> &params){
     int len = strlen(buffer);
     int i;
 
@@ -25,37 +25,64 @@ void ServerUtil::parseRequest( char *buffer, string &method, string &path, int &
     }
 
     // parse query string parameters
-    if(buffer[i] == '?'){
-        while(buffer[i] == '?' || buffer[i] == '&'){
-            string key = "";
-            string value = "";
-            for( i++ ; i < len ; i++ ){
-                if(buffer[i] == '=')
-                    break;
-                key += buffer[i];
+    if(method == "GET"){
+        if(buffer[i] == '?'){
+            while(buffer[i] == '?' || buffer[i] == '&'){
+                string key = "";
+                string value = "";
+                for( i++ ; i < len ; i++ ){
+                    if(buffer[i] == '=')
+                        break;
+                    key += buffer[i];
+                }
+                for( i++ ; i < len ; i++ ){
+                    if(buffer[i] == '&' || buffer[i] == ' ')
+                        break;
+                    value += buffer[i];
+                }
+                if(key == "sessionID")
+                    sessionID = atoi(value.c_str());
+                params[key] = value;
             }
-            for( i++ ; i < len ; i++ ){
-                if(buffer[i] == '&' || buffer[i] == ' ')
-                    break;
-                value += buffer[i];
-            }
-            if(key == "sessionID")
-                sessionID = atoi(value.c_str());
-            params[key] = value;
+        } else{
+            sessionID = -1;
+            params.clear();
         }
     } else{
-        sessionID = -1;
-        params.clear();
+        cout<<"in post parseeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"<<endl;
+        for(; i + 1 < len ; i++ ){
+            // cout<<buffer[i]<<endl;
+            // cout<<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"<<(buffer[i] == '\n')<<endl;
+            // cout<<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>########################"<<(buffer[i] == ' ')<<endl;
+            if(buffer[i] == '\n' && buffer[i+2] == '\n'){
+                break;
+            }
+        }
+        cout<<"i: "<<i<<endl;
+        cout<<"len: "<<len<<endl;
+        if(i + 1 != len){
+            i += 2;
+            while(i < len && (buffer[i] == '&' || buffer[i] == '\n')){
+                string key = "";
+                string value = "";
+                for( i++ ; i < len ; i++ ){
+                    if(buffer[i] == '=')
+                        break;
+                    key += buffer[i];
+                }
+                for( i++ ; i < len ; i++ ){
+                    if(buffer[i] == '&' || buffer[i] == ' ')
+                        break;
+                    value += buffer[i];
+                }
+                if(key == "sessionID")
+                    sessionID = atoi(value.c_str());
+                params[key] = value;
+                cout<<"in whileee   "<<key<<"  "<<value<<endl;
+            }
+        } else{
+            sessionID = -1;
+            params.clear();
+        }
     }
-}
-
-void ServerUtil::createPostResponse( char *&postIndex, int socket_id){
-    string responseStr = "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: ";
-    responseStr += "7";
-    responseStr += "\n\n";
-    responseStr += "posted " + to_string(socket_id);
-    const int responseLen = responseStr.size();
-
-    postIndex = new char[responseLen];
-    strcpy(postIndex, responseStr.c_str());
 }

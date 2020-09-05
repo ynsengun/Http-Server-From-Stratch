@@ -11,8 +11,7 @@
 using namespace std;
 
 namespace ServerUtil{
-    void parseRequest( char *, string &, string &, int &, map<string, string>);
-    void createPostResponse( char *&, int);
+    void parseRequest( char *, string &, string &, int &, map<string, string> &);
 }
 
 #endif // __SERVER_UTILITY

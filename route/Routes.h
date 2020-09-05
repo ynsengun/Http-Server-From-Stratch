@@ -5,7 +5,7 @@
 #include <string>
 #include <map>
 
-#include "RouteUtility.h"
+#include "../server/Session.h"
 
 using namespace std;
 
@@ -19,10 +19,10 @@ namespace Routes{
     // Initializing static pages at starting phase will make the processes faster.
     void initializeStaticPages();
 
-    string httpGet(string, map<string, string> params = emptyMap);
-    string httpPost(string, map<string, string> params = emptyMap);
-    string httpPut(string, map<string, string> params = emptyMap);
-    string httpDelete(string, map<string, string> params = emptyMap);
+    string httpGet(string, map<string, string> params = emptyMap, Session *session = NULL);
+    string httpPost(string, map<string, string> params = emptyMap, Session *session = NULL);
+    string httpPut(string, map<string, string> params = emptyMap, Session *session = NULL);
+    string httpDelete(string, map<string, string> params = emptyMap, Session *session = NULL);
 }
 
 #endif // __ROUTES

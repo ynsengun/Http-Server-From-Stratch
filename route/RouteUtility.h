@@ -11,13 +11,12 @@
 using namespace std;
 
 namespace RouteUtility{
-    extern string firstPartIndex;
-    extern string secondPartIndex;
+    extern string htmlOpeningTemplate;
+    extern string htmlClosingTemplate;
 
     string readFile(const string &);
-    string getSessionedIndexHTML(const string &);
-    void generateSessionedIndexHTML(const string &);
     string success(const string &);
+    string HTMLBody(const string &);
 }
 
 #endif // __ROUTE_UTILITY
