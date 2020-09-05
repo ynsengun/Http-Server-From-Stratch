@@ -1,4 +1,4 @@
-#include "RouteUtility.h"
+#include "RouterUtility.h"
 
 string RouteUtility::htmlOpeningTemplate = "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>Server</title></head><body>";
 string RouteUtility::htmlClosingTemplate = "</body></html>";
@@ -23,4 +23,8 @@ string RouteUtility::HTMLBody(const string &content){
     ret += RouteUtility::htmlClosingTemplate;
 
     return ret;
+}
+
+string RouteUtility::includeSessionOnForm(const string &sessionID){
+    return "<input value=\"" + sessionID + "\" name=\"sessionID\" style=\"display:none\" />";
 }

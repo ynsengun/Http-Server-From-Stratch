@@ -14,7 +14,7 @@ const map<string, string> emptyMap;
 
 namespace Routes{
     // Static pages
-    extern string indexHTML;
+    extern string aboutHTML;
 
     // Initializing static pages at starting phase will make the processes faster.
     void initializeStaticPages();

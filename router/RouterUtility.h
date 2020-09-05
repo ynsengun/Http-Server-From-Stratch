@@ -17,6 +17,7 @@ namespace RouteUtility{
     string readFile(const string &);
     string success(const string &);
     string HTMLBody(const string &);
+    string includeSessionOnForm(const string &);
 }
 
 #endif // __ROUTE_UTILITY

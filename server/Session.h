@@ -7,6 +7,7 @@
 #include <queue>
 #include <any>
 #include <vector>
+#include <ctime>
 
 using namespace std;
 
@@ -25,6 +26,7 @@ private:
     int sessionID;
     queue<Request> requests;
     vector<string> data;
+    time_t lastActive;
 
 public:
     static int getNextSessionID();
@@ -38,6 +40,8 @@ public:
     Request getNextRequest();
     void pushNewRequest(Request);
     bool hasNextRequest();
+
+    time_t getLastActive();
 
 };
 
