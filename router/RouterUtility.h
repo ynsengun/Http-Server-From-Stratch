@@ -10,7 +10,7 @@
 
 using namespace std;
 
-namespace RouteUtility{
+namespace RouterUtility{
     extern string htmlOpeningTemplate;
     extern string htmlClosingTemplate;
 

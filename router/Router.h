@@ -12,13 +12,14 @@ using namespace std;
 // this is an empty map to use as default value
 const map<string, string> emptyMap;
 
-namespace Routes{
+namespace Router{
     // Static pages
     extern string aboutHTML;
 
     // Initializing static pages at starting phase will make the processes faster.
-    void initializeStaticPages();
+    void init();
 
+    string service(string, string, map<string, string> params = emptyMap, Session *session = NULL);
     string httpGet(string, map<string, string> params = emptyMap, Session *session = NULL);
     string httpPost(string, map<string, string> params = emptyMap, Session *session = NULL);
     string httpPut(string, map<string, string> params = emptyMap, Session *session = NULL);

@@ -36,7 +36,7 @@ private:
         thread t;
     };
     struct ClientInitializerThread{
-        queue<int> clientSocketIDs;
+        queue<Request> requests; 
         thread t;
     };
     struct SessionManagementThread{

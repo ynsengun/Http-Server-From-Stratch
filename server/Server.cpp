@@ -2,8 +2,14 @@
 #include "ServerUtility.h"
 #include "../router/Router.h"
 
-const static int REQUEST_BUFFER_SIZE = 1500;
+const static int REQUEST_BUFFER_SIZE = 1000;
 int nextInitializer = 0;
+
+mutex nextInitializerMutex;
+mutex sessionRequestPushMutex;
+mutex newSessionIDMutex;
+mutex activeSessionPushMutex;
+mutex sessionPushMutex;
 
 // after complete init, the socket will be ready to accept connections
 // static pages will be shaped and all threads are initiaized
@@ -31,7 +37,7 @@ void Server::init(int port){
         exit(EXIT_FAILURE);
     }
 
-    Routes::initializeStaticPages();
+    Router::init();
     initializeThreads();
 }
 
@@ -55,7 +61,9 @@ void Server::initializeThreads(){
     sessionManagementThread.t = thread(&Server::cleanSessions, this);
 }
 
-mutex nextInitializerMutex, sessionRequestPushMutex;
+/**
+ * Worker threads run on this method
+ */
 void Server::parseRequest(int tid){
     while(1){
         if(!workerThreads[tid].requestSocketIDs.empty()){
@@ -73,15 +81,17 @@ void Server::parseRequest(int tid){
             ServerUtil::parseRequest(buffer, method, path, sessionID, params);
 
             cout<<"\n########################## start ###########################"<<endl;
-            cout<<"method path sessionID:   "<<method<<" "<<path<<" "<<sessionID<<endl;
-            cout<<"item:  "<<params["item"]<<endl;
+            cout<<"method - path - sessionID - item: "<<method<<" "<<path<<" "<<sessionID<<" "<<params["item"]<<endl;
             printf("%s\n",buffer );
-            cout<<"########################## end ###########################"<<endl;
+            cout<<"# # # # # # # # # # # # # # end # # # # # # # # # # # # # # # "<<endl;
 
-            if(sessionID == -1 && path != "/favicon.ico"){ // TODO path control?
-                cout<<"loaded on the initializer:   "<<nextInitializer<<endl;
+            if(sessionID != -1 && sessionManagementThread.sessions[sessionID].first == false){ // session is expired
+                sessionID = -1;
+            }
+
+            if(sessionID == -1 && path != "/favicon.ico"){
                 nextInitializerMutex.lock();
-                clientInitializerThread[nextInitializer].clientSocketIDs.push(requestSocketID); // push request ?
+                clientInitializerThread[nextInitializer].requests.push(Request{method, path, requestSocketID, params});
                 nextInitializer++;
                 if(nextInitializer >= CLIENT_INITIALIZER_THREAD_COUNT){
                     nextInitializer -= CLIENT_INITIALIZER_THREAD_COUNT;
@@ -105,26 +115,15 @@ void Server::processSessionRequest(int tid){
         if(!clientSesssionThreads[tid].clients.empty()){
             int sessionID = clientSesssionThreads[tid].clients.front();
             clientSesssionThreads[tid].clients.pop();
-            // cout<<"hereeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee "<<sessionID<<endl;
 
             bs session = sessionManagementThread.sessions[sessionID];
 
             if(session.first){
                 while(session.second->hasNextRequest()){
                     Request req = session.second->getNextRequest();
-                    string response;
 
-                    if(req.method == "GET"){
-                        response = Routes::httpGet(req.path, req.params, session.second);
-                    } else if(req.method == "POST"){
-                        response = Routes::httpPost(req.path, req.params, session.second);
-                    } else if(req.method == "PUT"){
-                        response = Routes::httpPut(req.path, req.params, session.second);
-                    } else if(req.method == "DELETE"){
-                        response = Routes::httpDelete(req.path, req.params, session.second);
-                    }
+                    string response = Router::service(req.method, req.path, req.params, session.second);
 
-                    cout<<"here is the response                 "<<response<<endl;
                     const int responseLen = response.size();
                     write(req.responseSocketID , response.c_str() , responseLen);
                     close(req.responseSocketID);
@@ -146,42 +145,36 @@ int Server::chooseSessionThread(){
     return mint;
 }
 
-mutex newSessionIDMutex, activeSessionPushMutex, sessionPushMutex;
 void Server::processInitializerRequest(int tid){
     while(1){
-        if(!clientInitializerThread[tid].clientSocketIDs.empty()){
-            int socketID = clientInitializerThread[tid].clientSocketIDs.front();
-            clientInitializerThread[tid].clientSocketIDs.pop();
+        if(!clientInitializerThread[tid].requests.empty()){
+            // get a new request from
+            Request req = clientInitializerThread[tid].requests.front();
+            clientInitializerThread[tid].requests.pop();
 
+            // create new session
             newSessionIDMutex.lock();
             int newSessionID = Session::getNextSessionID();
             newSessionIDMutex.unlock();
             Session *newSession = new Session(newSessionID);
+
+            // session management thread is informed
             sessionManagementThread.sessions[newSessionID] = bs(true, newSession);
             activeSessionPushMutex.lock();
             sessionManagementThread.activeSessionIDs.push(newSessionID);
             activeSessionPushMutex.unlock();
 
-            map<string, string> params;
-            string response = Routes::httpGet("/", params, newSession);
+            // redirect the request to the router and send response to the related socket
+            string response = Router::service(req.method, req.path, req.params, newSession);
             const int responseLen = response.size();
-            write(socketID , response.c_str() , responseLen);
+            write(req.responseSocketID , response.c_str() , responseLen);
+            close(req.responseSocketID);
 
+            // assign the further operation of this session to a client session thread that has the minimum number of clients
             int sessionThreadID = chooseSessionThread();
-            cout<<"chooosen thread:  "<<sessionThreadID<<endl;
-
             sessionPushMutex.lock();
             clientSesssionThreads[sessionThreadID].clients.push(newSessionID);
             sessionPushMutex.unlock();
-            cout<<"size::::::::::::::::::::::::::::::::::: "<<clientSesssionThreads[sessionThreadID].clients.size()<<endl;
-            cout<<sessionManagementThread.activeSessionIDs.size()<<endl;
-
-
-            cout<<"New Session ID:   "<<newSessionID<<endl; // TODO delete
-            cout<<"Thread ID:        "<<tid<<endl; // TODO delete
-
-
-            close(socketID);
         }
     }
 }
@@ -193,10 +186,8 @@ void Server::cleanSessions(){
     int counter = 0;
 
     while(1){
-        // cout<<"-------------------------------------------------------------"<<endl;
         for( int i = 0 ; i < sessionManagementThread.activeSessionIDs.size() ; i++, counter++ ){
-            // cout<<"qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq      "<<sessionManagementThread.activeSessionIDs.size()<<endl;
-            if(counter == 1000){
+            if(counter == 500){
                 time(&cur);
                 counter = 0;
             }
@@ -206,9 +197,7 @@ void Server::cleanSessions(){
 
             if(session.first){
                 int diff = (int)difftime(cur, session.second->getLastActive());
-                // cout<<"diffffffffffffffffffffffffffffffffff   "<<sessionID<<"  "<<diff<<endl;
                 if(diff >= expireTime){
-                    // cout<<"girdiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii"<<endl;
                     session.first = false;
                     delete session.second;
                     session.second = NULL;

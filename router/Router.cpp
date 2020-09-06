@@ -1,13 +1,30 @@
 #include "Router.h"
 #include "RouterUtility.h"
 
-string Routes::aboutHTML;
+string Router::aboutHTML;
 
-void Routes::initializeStaticPages(){
-    aboutHTML = RouteUtility::readFile("public/about.html");
+void Router::init(){
+    aboutHTML = RouterUtility::readFile("public/about.html");
 }
 
-string Routes::httpGet(string path, map<string, string> params, Session *session){
+string Router::service(string method, string path, map<string, string> params, Session *session){
+
+    /**
+     * Add your filter operations here
+     */
+
+    if(method == "GET"){
+        return Router::httpGet(path, params, session);
+    } else if(method == "POST"){
+        return Router::httpPost(path, params, session);
+    } else if(method == "PUT"){
+        return Router::httpPut(path, params, session);
+    } else if(method == "DELETE"){
+        return Router::httpDelete(path, params, session);
+    }
+}
+
+string Router::httpGet(string path, map<string, string> params, Session *session){
     cout<<path<<path.length()<<endl;
 
     if(path == "/"){
@@ -21,29 +38,35 @@ string Routes::httpGet(string path, map<string, string> params, Session *session
 
         // form (about)
         body += "<form method=\"GET\" action=\"http://localhost:8088/about\">";
-        body += RouteUtility::includeSessionOnForm(sessionID); // TODO fix here, after initializer thread accept in proper way
+        body += RouterUtility::includeSessionOnForm(sessionID); // TODO fix here, after initializer thread accept in proper way
         body += "<button>About The Server</button>";
         body += "</form></br>";
 
         // form (todo)
         body += "<form method=\"GET\" action=\"http://localhost:8088/todo\">";
-        body += RouteUtility::includeSessionOnForm(sessionID);
+        body += RouterUtility::includeSessionOnForm(sessionID);
         body += "<button>Open my TODOs</button>";
         body += "</form>";
 
-        return RouteUtility::success(RouteUtility::HTMLBody(body));
+        return RouterUtility::success(RouterUtility::HTMLBody(body));
     }
 
     if(path == "/about"){
-        return RouteUtility::success(aboutHTML);
+        return RouterUtility::success(aboutHTML);
     }
 
     if(path == "/todo"){
         string sessionID = to_string(session->getSessionID());
         vector<string> items = session->getData();
 
+        // home button
+        string body = "<form method=\"GET\" action=\"http://localhost:8088\">";
+        body += RouterUtility::includeSessionOnForm(sessionID);
+        body += "<button>Home</button>";
+        body += "</form>";
+
         // sessionID
-        string body = "<h1>Session ID: " + sessionID + "</h1></br>";
+        body += "<h1>Session ID: " + sessionID + "</h1></br>";
 
         // header
         body += "<h2>TODO</h2>";
@@ -51,22 +74,22 @@ string Routes::httpGet(string path, map<string, string> params, Session *session
         // todo list
         body += "<ul>";
         for( string item : items ){
-            body += "<li>" + item + "<li>";
+            body += "<li>" + item + "</li>";
         }
         body += "</ul>";
 
         // form
         body += "<form method=\"POST\" action=\"http://localhost:8088/todo\">";
-        body += RouteUtility::includeSessionOnForm(sessionID);
+        body += RouterUtility::includeSessionOnForm(sessionID);
         body += "<input name=\"item\" />";
         body += "<button>Add</button>";
         body += "</form>";
 
-        return RouteUtility::success(RouteUtility::HTMLBody(body));
+        return RouterUtility::success(RouterUtility::HTMLBody(body));
     }
 }
 
-string Routes::httpPost(string path, map<string, string> params, Session *session){
+string Router::httpPost(string path, map<string, string> params, Session *session){
     if(path == "/todo"){
         // save the new item to the session
         string item = params["item"];
@@ -76,8 +99,14 @@ string Routes::httpPost(string path, map<string, string> params, Session *sessio
         string sessionID = to_string(session->getSessionID());
         vector<string> items = session->getData();
 
+        // home button
+        string body = "<form method=\"GET\" action=\"http://localhost:8088\">";
+        body += RouterUtility::includeSessionOnForm(sessionID);
+        body += "<button>Home</button>";
+        body += "</form>";
+
         // sessionID
-        string body = "<h1>Session ID: " + sessionID + "</h1></br>";
+        body += "<h1>Session ID: " + sessionID + "</h1></br>";
 
         // header
         body += "<h2>TODO</h3>";
@@ -91,7 +120,7 @@ string Routes::httpPost(string path, map<string, string> params, Session *sessio
 
         // form
         body += "<form method=\"POST\" action=\"http://localhost:8088/todo\">";
-        body += RouteUtility::includeSessionOnForm(sessionID);
+        body += RouterUtility::includeSessionOnForm(sessionID);
         body += "<input name=\"item\" />";
         body += "<button>Add</button>";
         body += "</form>";
@@ -99,17 +128,17 @@ string Routes::httpPost(string path, map<string, string> params, Session *sessio
         // message
         body += "<h5>Item is added succcessfully</h5>";
 
-        return RouteUtility::success(RouteUtility::HTMLBody(body));
+        return RouterUtility::success(RouterUtility::HTMLBody(body));
     }
 }
 
-string Routes::httpPut(string path, map<string, string> params, Session *session){
+string Router::httpPut(string path, map<string, string> params, Session *session){
     /**
      * Add your routes here
      */
 }
 
-string Routes::httpDelete(string path, map<string, string> params, Session *session){
+string Router::httpDelete(string path, map<string, string> params, Session *session){
     /**
      * Add your routes here
      */
