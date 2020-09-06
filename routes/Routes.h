@@ -12,7 +12,7 @@ using namespace std;
 /**
  * all http request are forwarded service method of this, then service forwards again to the related http method
  */
-namespace Router{
+namespace Routes{
     // Static pages
     extern string aboutHTML;
 

@@ -1,5 +1,5 @@
-#ifndef __ROUTE_UTILITY
-#define __ROUTE_UTILITY
+#ifndef __ROUTES_UTILITY
+#define __ROUTES_UTILITY
 
 #include <iostream>
 #include <string>
@@ -14,7 +14,7 @@ using namespace std;
  * utility package to create http responses easier
  * can be used in routes
  */
-namespace RouterUtility{
+namespace RoutesUtility{
     extern string htmlOpeningTemplate;
     extern string htmlClosingTemplate;
 

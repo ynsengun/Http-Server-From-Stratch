@@ -1,6 +1,6 @@
 #include "Server.h"
 #include "ServerUtility.h"
-#include "../router/Router.h"
+#include "../routes/Routes.h"
 
 const static int REQUEST_BUFFER_SIZE = 1000;
 int nextInitializer = 0;
@@ -39,7 +39,7 @@ void Server::init(int port){
         exit(EXIT_FAILURE);
     }
 
-    Router::init();
+    Routes::init();
     initializeThreads();
 }
 
@@ -144,7 +144,7 @@ void Server::parseRequest(int tid){
 /**
  * ClientInitializerThreads work on this method
  * not sessioned request are forwarded here
- * this creates a new session for the client and forwards the request to the Router::service() method
+ * this creates a new session for the client and forwards the request to the Routes::service() method
  * send the response to the socket and closes it
  * also assign the session to a client session thread to carry out the client's(session) further requests
  */
@@ -167,8 +167,8 @@ void Server::processInitializerRequest(int tid){
             sessionManagementThread.activeSessionIDs.push(newSessionID);
             activeSessionPushMutex.unlock();
 
-            // redirect the request to the router and send response to the related socket
-            string response = Router::service(req.method, req.path, req.params, newSession);
+            // redirect the request to the routes and send response to the related socket
+            string response = Routes::service(req.method, req.path, req.params, newSession);
             const int responseLen = response.size();
             write(req.responseSocketID , response.c_str() , responseLen);
             close(req.responseSocketID);
@@ -199,9 +199,9 @@ void Server::processSessionRequest(int tid){
             // if the session is not expired process it and add the session to the end of the q again
             if(session.first){
                 while(session.second->hasNextRequest()){
-                    // get the next parsed request of the session and forward it to the Router::service()
+                    // get the next parsed request of the session and forward it to the Routes::service()
                     Request req = session.second->getNextRequest();
-                    string response = Router::service(req.method, req.path, req.params, session.second);
+                    string response = Routes::service(req.method, req.path, req.params, session.second);
 
                     // writes the http response to the related socket, then close it
                     const int responseLen = response.size();

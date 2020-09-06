@@ -1,15 +1,15 @@
-#include "Router.h"
-#include "RouterUtility.h"
+#include "Routes.h"
+#include "RoutesUtility.h"
 
-string Router::aboutHTML;
+string Routes::aboutHTML;
 
 /**
  * init is invoked at the initialization phase of the server once.
  * so init is called only once at the very beginning
  * it can be used to initialize static files
  */
-void Router::init(){
-    aboutHTML = RouterUtility::readFile("public/about.html");
+void Routes::init(){
+    aboutHTML = RoutesUtility::readFile("public/about.html");
 }
 
 /**
@@ -17,20 +17,20 @@ void Router::init(){
  * any filter or middleware operation can be done here
  * then service will forward the request to the related http method
  */
-string Router::service(string &method, string &path, map<string, string> &params, Session *session){
+string Routes::service(string &method, string &path, map<string, string> &params, Session *session){
 
     /**
      * Add your filter or middleware operations here
      */
 
     if(method == "GET"){
-        return Router::httpGet(path, params, session);
+        return Routes::httpGet(path, params, session);
     } else if(method == "POST"){
-        return Router::httpPost(path, params, session);
+        return Routes::httpPost(path, params, session);
     } else if(method == "PUT"){
-        return Router::httpPut(path, params, session);
+        return Routes::httpPut(path, params, session);
     } else if(method == "DELETE"){
-        return Router::httpDelete(path, params, session);
+        return Routes::httpDelete(path, params, session);
     }
 }
 
@@ -38,7 +38,7 @@ string Router::service(string &method, string &path, map<string, string> &params
  * all get requests will be forwarded here
  * a proper http response should be returned, utility functions can be used for this
  */
-string Router::httpGet(string &path, map<string, string> &params, Session *session){
+string Routes::httpGet(string &path, map<string, string> &params, Session *session){
     if(path == "/"){
         string sessionID = to_string(session->getSessionID());
 
@@ -50,22 +50,22 @@ string Router::httpGet(string &path, map<string, string> &params, Session *sessi
 
         // form (about)
         body += "<form method=\"GET\" action=\"http://localhost:8088/about\">";
-        body += RouterUtility::includeSessionOnForm(sessionID);
+        body += RoutesUtility::includeSessionOnForm(sessionID);
         body += "<button>About The Server</button>";
         body += "</form></br>";
 
         // form (todo)
         body += "<form method=\"GET\" action=\"http://localhost:8088/todo\">";
-        body += RouterUtility::includeSessionOnForm(sessionID);
+        body += RoutesUtility::includeSessionOnForm(sessionID);
         body += "<button>Open my TODOs</button>";
         body += "</form>";
 
-        return RouterUtility::success(RouterUtility::HTMLBody(body));
+        return RoutesUtility::success(RoutesUtility::HTMLBody(body));
     }
 
     if(path == "/about"){
         // return a static page that is initialized in init()
-        return RouterUtility::success(aboutHTML);
+        return RoutesUtility::success(aboutHTML);
     }
 
     if(path == "/todo"){
@@ -74,7 +74,7 @@ string Router::httpGet(string &path, map<string, string> &params, Session *sessi
 
         // home button
         string body = "<form method=\"GET\" action=\"http://localhost:8088\">";
-        body += RouterUtility::includeSessionOnForm(sessionID);
+        body += RoutesUtility::includeSessionOnForm(sessionID);
         body += "<button>Home</button>";
         body += "</form>";
 
@@ -93,12 +93,12 @@ string Router::httpGet(string &path, map<string, string> &params, Session *sessi
 
         // form
         body += "<form method=\"POST\" action=\"http://localhost:8088/todo\">";
-        body += RouterUtility::includeSessionOnForm(sessionID);
+        body += RoutesUtility::includeSessionOnForm(sessionID);
         body += "<input name=\"item\" />";
         body += "<button>Add</button>";
         body += "</form>";
 
-        return RouterUtility::success(RouterUtility::HTMLBody(body));
+        return RoutesUtility::success(RoutesUtility::HTMLBody(body));
     }
 }
 
@@ -106,7 +106,7 @@ string Router::httpGet(string &path, map<string, string> &params, Session *sessi
  * all post requests will be forwarded here
  * a proper http response should be returned, utility functions can be used for this
  */
-string Router::httpPost(string &path, map<string, string> &params, Session *session){
+string Routes::httpPost(string &path, map<string, string> &params, Session *session){
     if(path == "/todo"){
         // save the new item to the session
         string item = params["item"];
@@ -118,7 +118,7 @@ string Router::httpPost(string &path, map<string, string> &params, Session *sess
 
         // home button
         string body = "<form method=\"GET\" action=\"http://localhost:8088\">";
-        body += RouterUtility::includeSessionOnForm(sessionID);
+        body += RoutesUtility::includeSessionOnForm(sessionID);
         body += "<button>Home</button>";
         body += "</form>";
 
@@ -137,7 +137,7 @@ string Router::httpPost(string &path, map<string, string> &params, Session *sess
 
         // form
         body += "<form method=\"POST\" action=\"http://localhost:8088/todo\">";
-        body += RouterUtility::includeSessionOnForm(sessionID);
+        body += RoutesUtility::includeSessionOnForm(sessionID);
         body += "<input name=\"item\" />";
         body += "<button>Add</button>";
         body += "</form>";
@@ -145,7 +145,7 @@ string Router::httpPost(string &path, map<string, string> &params, Session *sess
         // message
         body += "<h5>Item is added succcessfully</h5>";
 
-        return RouterUtility::success(RouterUtility::HTMLBody(body));
+        return RoutesUtility::success(RoutesUtility::HTMLBody(body));
     }
 }
 
@@ -153,7 +153,7 @@ string Router::httpPost(string &path, map<string, string> &params, Session *sess
  * all put requests will be forwarded here
  * a proper http response should be returned, utility functions can be used for this
  */
-string Router::httpPut(string &path, map<string, string> &params, Session *session){
+string Routes::httpPut(string &path, map<string, string> &params, Session *session){
     /**
      * Add your routes here
      */
@@ -163,7 +163,7 @@ string Router::httpPut(string &path, map<string, string> &params, Session *sessi
  * all delete requests will be forwarded here
  * a proper http response should be returned, utility functions can be used for this
  */
-string Router::httpDelete(string &path, map<string, string> &params, Session *session){
+string Routes::httpDelete(string &path, map<string, string> &params, Session *session){
     /**
      * Add your routes here
      */
