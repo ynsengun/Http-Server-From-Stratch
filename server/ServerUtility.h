@@ -10,6 +10,9 @@
 
 using namespace std;
 
+/**
+ * utility package to use in server
+ */
 namespace ServerUtil{
     void parseRequest( char *, string &, string &, int &, map<string, string> &);
 }

@@ -18,6 +18,11 @@ struct Request{
     map<string, string> params;
 };
 
+/**
+ * a session represents a client
+ * it keeps the necessary information about clients
+ * such as, last active time, session storage, requests from client
+ */
 class Session{
 
 private:

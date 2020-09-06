@@ -1,5 +1,8 @@
 #include "ServerUtility.h"
 
+/**
+ * parses the http request as method, path and params
+ */
 void ServerUtil::parseRequest( char *buffer, string &method, string &path, int &sessionID, map<string, string> &params){
     int len = strlen(buffer);
     int i;
@@ -49,17 +52,11 @@ void ServerUtil::parseRequest( char *buffer, string &method, string &path, int &
             params.clear();
         }
     } else{
-        cout<<"in post parseeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"<<endl;
         for(; i + 1 < len ; i++ ){
-            // cout<<buffer[i]<<endl;
-            // cout<<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"<<(buffer[i] == '\n')<<endl;
-            // cout<<">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>########################"<<(buffer[i] == ' ')<<endl;
             if(buffer[i] == '\n' && buffer[i+2] == '\n'){
                 break;
             }
         }
-        cout<<"i: "<<i<<endl;
-        cout<<"len: "<<len<<endl;
         if(i + 1 != len){
             i += 2;
             while(i < len && (buffer[i] == '&' || buffer[i] == '\n')){
@@ -78,7 +75,6 @@ void ServerUtil::parseRequest( char *buffer, string &method, string &path, int &
                 if(key == "sessionID")
                     sessionID = atoi(value.c_str());
                 params[key] = value;
-                cout<<"in whileee   "<<key<<"  "<<value<<endl;
             }
         } else{
             sessionID = -1;

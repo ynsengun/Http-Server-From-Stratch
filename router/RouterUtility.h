@@ -10,6 +10,10 @@
 
 using namespace std;
 
+/**
+ * utility package to create http responses easier
+ * can be used in routes
+ */
 namespace RouterUtility{
     extern string htmlOpeningTemplate;
     extern string htmlClosingTemplate;

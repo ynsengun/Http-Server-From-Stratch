@@ -3,14 +3,24 @@
 
 string Router::aboutHTML;
 
+/**
+ * init is invoked at the initialization phase of the server once.
+ * so init is called only once at the very beginning
+ * it can be used to initialize static files
+ */
 void Router::init(){
     aboutHTML = RouterUtility::readFile("public/about.html");
 }
 
-string Router::service(string method, string path, map<string, string> params, Session *session){
+/**
+ * service is the first destination of every request
+ * any filter or middleware operation can be done here
+ * then service will forward the request to the related http method
+ */
+string Router::service(string &method, string &path, map<string, string> &params, Session *session){
 
     /**
-     * Add your filter operations here
+     * Add your filter or middleware operations here
      */
 
     if(method == "GET"){
@@ -24,9 +34,11 @@ string Router::service(string method, string path, map<string, string> params, S
     }
 }
 
-string Router::httpGet(string path, map<string, string> params, Session *session){
-    cout<<path<<path.length()<<endl;
-
+/**
+ * all get requests will be forwarded here
+ * a proper http response should be returned, utility functions can be used for this
+ */
+string Router::httpGet(string &path, map<string, string> &params, Session *session){
     if(path == "/"){
         string sessionID = to_string(session->getSessionID());
 
@@ -38,7 +50,7 @@ string Router::httpGet(string path, map<string, string> params, Session *session
 
         // form (about)
         body += "<form method=\"GET\" action=\"http://localhost:8088/about\">";
-        body += RouterUtility::includeSessionOnForm(sessionID); // TODO fix here, after initializer thread accept in proper way
+        body += RouterUtility::includeSessionOnForm(sessionID);
         body += "<button>About The Server</button>";
         body += "</form></br>";
 
@@ -52,6 +64,7 @@ string Router::httpGet(string path, map<string, string> params, Session *session
     }
 
     if(path == "/about"){
+        // return a static page that is initialized in init()
         return RouterUtility::success(aboutHTML);
     }
 
@@ -89,7 +102,11 @@ string Router::httpGet(string path, map<string, string> params, Session *session
     }
 }
 
-string Router::httpPost(string path, map<string, string> params, Session *session){
+/**
+ * all post requests will be forwarded here
+ * a proper http response should be returned, utility functions can be used for this
+ */
+string Router::httpPost(string &path, map<string, string> &params, Session *session){
     if(path == "/todo"){
         // save the new item to the session
         string item = params["item"];
@@ -132,13 +149,21 @@ string Router::httpPost(string path, map<string, string> params, Session *sessio
     }
 }
 
-string Router::httpPut(string path, map<string, string> params, Session *session){
+/**
+ * all put requests will be forwarded here
+ * a proper http response should be returned, utility functions can be used for this
+ */
+string Router::httpPut(string &path, map<string, string> &params, Session *session){
     /**
      * Add your routes here
      */
 }
 
-string Router::httpDelete(string path, map<string, string> params, Session *session){
+/**
+ * all delete requests will be forwarded here
+ * a proper http response should be returned, utility functions can be used for this
+ */
+string Router::httpDelete(string &path, map<string, string> &params, Session *session){
     /**
      * Add your routes here
      */

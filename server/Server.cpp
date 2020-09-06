@@ -11,8 +11,10 @@ mutex newSessionIDMutex;
 mutex activeSessionPushMutex;
 mutex sessionPushMutex;
 
-// after complete init, the socket will be ready to accept connections
-// static pages will be shaped and all threads are initiaized
+/**
+ * after complete init, the socket will be ready to accept connections
+ * static pages will be shaped and all threads are initiaized
+ */
 void Server::init(int port){
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
         perror("In socket");
@@ -41,6 +43,35 @@ void Server::init(int port){
     initializeThreads();
 }
 
+/**
+ * all incoming request are first faced here
+ * and the socketIDs are sent to worker threads to parse the request
+ */
+void Server::run(){
+    int addrlen = sizeof(address);
+    int new_socket;
+    int nextWorker = 0;
+
+    cout<<"Server is running..."<<endl;
+
+    while(1) {
+        if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen))<0) {
+            perror("In accept");
+            exit(EXIT_FAILURE);
+        }
+
+        // assign the socket to the next worker thread
+        workerThreads[nextWorker].requestSocketIDs.push(new_socket);
+        nextWorker++;
+        if(nextWorker >= WORKER_THREAD_COUNT){
+            nextWorker -= WORKER_THREAD_COUNT;
+        }
+    }
+}
+
+/**
+ * all threads are initialized here
+ */
 void Server::initializeThreads(){
     // worker threads
     for( int i = 0 ; i < WORKER_THREAD_COUNT ; i++ ){
@@ -63,32 +94,32 @@ void Server::initializeThreads(){
 
 /**
  * Worker threads run on this method
+ * it reads all the incoming request from their sockets and parses the request
+ * if the request does contain a sessionID, the parsed request is forwarded to client session thread
+ * if does not contain a sessionID, the parsed request is forwarded to client initializer thread
  */
 void Server::parseRequest(int tid){
     while(1){
         if(!workerThreads[tid].requestSocketIDs.empty()){
+            // get the next request socket id, and read the info in it
             int requestSocketID = workerThreads[tid].requestSocketIDs.front();
             workerThreads[tid].requestSocketIDs.pop();
-
             char buffer[REQUEST_BUFFER_SIZE];
             read( requestSocketID , buffer, REQUEST_BUFFER_SIZE);
 
+            // parse the request as method, path, sessionID and params(from query string)
             string method = "";
             string path = "";
             int sessionID = -1;
             map<string, string> params;
-
             ServerUtil::parseRequest(buffer, method, path, sessionID, params);
 
-            cout<<"\n########################## start ###########################"<<endl;
-            cout<<"method - path - sessionID - item: "<<method<<" "<<path<<" "<<sessionID<<" "<<params["item"]<<endl;
-            printf("%s\n",buffer );
-            cout<<"# # # # # # # # # # # # # # end # # # # # # # # # # # # # # # "<<endl;
-
-            if(sessionID != -1 && sessionManagementThread.sessions[sessionID].first == false){ // session is expired
+             // if session is expired
+            if(sessionID != -1 && sessionManagementThread.sessions[sessionID].first == false){
                 sessionID = -1;
             }
 
+             // forward the request to the next client initilizer thread if does not have sessionID
             if(sessionID == -1 && path != "/favicon.ico"){
                 nextInitializerMutex.lock();
                 clientInitializerThread[nextInitializer].requests.push(Request{method, path, requestSocketID, params});
@@ -97,7 +128,7 @@ void Server::parseRequest(int tid){
                     nextInitializer -= CLIENT_INITIALIZER_THREAD_COUNT;
                 }
                 nextInitializerMutex.unlock();
-            } else{
+            } else{ // adds the request to the related session
                 bs session = sessionManagementThread.sessions[sessionID];
 
                 if(session.first){
@@ -110,45 +141,17 @@ void Server::parseRequest(int tid){
     }
 }
 
-void Server::processSessionRequest(int tid){
-    while(1){
-        if(!clientSesssionThreads[tid].clients.empty()){
-            int sessionID = clientSesssionThreads[tid].clients.front();
-            clientSesssionThreads[tid].clients.pop();
-
-            bs session = sessionManagementThread.sessions[sessionID];
-
-            if(session.first){
-                while(session.second->hasNextRequest()){
-                    Request req = session.second->getNextRequest();
-
-                    string response = Router::service(req.method, req.path, req.params, session.second);
-
-                    const int responseLen = response.size();
-                    write(req.responseSocketID , response.c_str() , responseLen);
-                    close(req.responseSocketID);
-                }
-
-                clientSesssionThreads[tid].clients.push(sessionID);
-            }
-        }
-    }
-}
-
-int Server::chooseSessionThread(){
-    int mint = 0;
-    for( int i = 1 ; i < CLIENT_SESSION_THREAD_COUNT ; i++ ){
-        if(clientSesssionThreads[mint].clients.size() > clientSesssionThreads[i].clients.size()){
-            mint = i;
-        }
-    }
-    return mint;
-}
-
+/**
+ * ClientInitializerThreads work on this method
+ * not sessioned request are forwarded here
+ * this creates a new session for the client and forwards the request to the Router::service() method
+ * send the response to the socket and closes it
+ * also assign the session to a client session thread to carry out the client's(session) further requests
+ */
 void Server::processInitializerRequest(int tid){
     while(1){
         if(!clientInitializerThread[tid].requests.empty()){
-            // get a new request from
+            // get the next parsed request
             Request req = clientInitializerThread[tid].requests.front();
             clientInitializerThread[tid].requests.pop();
 
@@ -179,6 +182,45 @@ void Server::processInitializerRequest(int tid){
     }
 }
 
+/**
+ * ClientSessionThreads work on this method
+ * this loops on the clients(sessions) and meets their requests
+ * clients(sessions) are shared equally amoung client session threads
+ * each thread loops on their clients(sessions)
+ */
+void Server::processSessionRequest(int tid){
+    while(1){
+        if(!clientSesssionThreads[tid].clients.empty()){
+            // gets the next client(session)
+            int sessionID = clientSesssionThreads[tid].clients.front();
+            clientSesssionThreads[tid].clients.pop();
+            bs session = sessionManagementThread.sessions[sessionID];
+
+            // if the session is not expired process it and add the session to the end of the q again
+            if(session.first){
+                while(session.second->hasNextRequest()){
+                    // get the next parsed request of the session and forward it to the Router::service()
+                    Request req = session.second->getNextRequest();
+                    string response = Router::service(req.method, req.path, req.params, session.second);
+
+                    // writes the http response to the related socket, then close it
+                    const int responseLen = response.size();
+                    write(req.responseSocketID , response.c_str() , responseLen);
+                    close(req.responseSocketID);
+                }
+
+                // add the session to end of the q again
+                clientSesssionThreads[tid].clients.push(sessionID);
+            }
+        }
+    }
+}
+
+/**
+ * SessionManagementThread run on this method
+ * loops on all sessions and check if they are used in last X times
+ * if not used it expires the sessions
+ */
 void Server::cleanSessions(){
     const int expireTime = 60 * 10; // 10 minutes
     time_t cur;
@@ -186,6 +228,7 @@ void Server::cleanSessions(){
     int counter = 0;
 
     while(1){
+        // loops on the active sessions
         for( int i = 0 ; i < sessionManagementThread.activeSessionIDs.size() ; i++, counter++ ){
             if(counter == 500){
                 time(&cur);
@@ -195,41 +238,27 @@ void Server::cleanSessions(){
             sessionManagementThread.activeSessionIDs.pop();
             bs &session = sessionManagementThread.sessions[sessionID];
 
-            if(session.first){
-                int diff = (int)difftime(cur, session.second->getLastActive());
-                if(diff >= expireTime){
-                    session.first = false;
-                    delete session.second;
-                    session.second = NULL;
-                } else{
-                    sessionManagementThread.activeSessionIDs.push(sessionID);
-                }
+            int diff = (int)difftime(cur, session.second->getLastActive());
+            if(diff >= expireTime){ // expires the session if it not used for the last X time
+                session.first = false;
+                delete session.second;
+                session.second = NULL;
+            } else{ // if not expired add the active list again
+                sessionManagementThread.activeSessionIDs.push(sessionID);
             }
         }
     }
 }
 
-void Server::run(){
-    int addrlen = sizeof(address);
-    int new_socket;
-    int nextWorker = 0;
-
-    while(1) {
-        printf("\n+++++++ Waiting for new connection ++++++++\n\n"); // TODO delete this line
-        if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen))<0) {
-            perror("In accept");
-            exit(EXIT_FAILURE);
-        }
-
-        cout<<"worker thread:   "<<nextWorker<<endl; // TODO delete
-
-        workerThreads[nextWorker].requestSocketIDs.push(new_socket);
-        nextWorker++;
-        if(nextWorker >= WORKER_THREAD_COUNT){
-            nextWorker -= WORKER_THREAD_COUNT;
+/**
+ * chooses a client session thread with the minimum number of clients(sessions)
+ */
+int Server::chooseSessionThread(){
+    int mint = 0;
+    for( int i = 1 ; i < CLIENT_SESSION_THREAD_COUNT ; i++ ){
+        if(clientSesssionThreads[mint].clients.size() > clientSesssionThreads[i].clients.size()){
+            mint = i;
         }
     }
-}
-
-void Server::clear(){
+    return mint;
 }
